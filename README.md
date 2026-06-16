@@ -96,7 +96,7 @@ pip install scikit-learn matplotlib numpy tqdm
 # This will create 'models/best_model.pth'
 ```
 
-6. **Set API key** (optional - default is "77ffda4c")
+6. **Set API key** (optional - default is "KWkKo1HmrQ3UWm9SvhOk3g8OgT4qcEPX")
 ```bash
 export DOG_CLASSIFIER_API_KEY="your_secure_api_key"  # Linux/Mac
 set DOG_CLASSIFIER_API_KEY=your_secure_api_key      # Windows
