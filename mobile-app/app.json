@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "PetSnap",
+    "slug": "petsnap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3b82f6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.petsnap.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "PetSnap needs access to your camera to take photos of dogs for breed identification.",
+        "NSPhotoLibraryUsageDescription": "PetSnap needs access to your photo library to select dog photos for breed identification."
+      }
+    },
+    "android": {
+      "package": "com.petsnap.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow PetSnap to access your camera to take photos of dogs."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow PetSnap to access your photos to identify dog breeds."
+        }
+      ]
+    ]
+  }
+}

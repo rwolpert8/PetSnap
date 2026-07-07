@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from contextlib import asynccontextmanager
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -16,14 +17,30 @@ from bs4 import BeautifulSoup
 import re
 from typing import Dict, List, Optional
 import uvicorn
+from pathlib import Path
 
 # Security
 security = HTTPBearer()
 
 # API Key Configuration
-API_KEY = os.getenv("DOG_CLASSIFIER_API_KEY", "KWkKo1HmrQ3UWm9SvhOk3g8OgT4qcEPX") 
+API_KEY = os.getenv("DOG_CLASSIFIER_API_KEY", "KWkKo1HmrQ3UWm9SvhOk3g8OgT4qcEPX")
 
-app = FastAPI(title="Dog Breed Classifier API", version="1.0.0")
+# Get the base directory (parent of api folder)
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "best_model.pth"
+IMAGES_PATH = BASE_DIR / "Images"
+
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Load model
+    load_model_and_classes()
+    print("✓ Model loaded successfully!")
+    yield
+    # Shutdown: Cleanup (if needed)
+    print("Shutting down...")
+
+app = FastAPI(title="Dog Breed Classifier API", version="1.0.0", lifespan=lifespan)
 
 # CORS middleware for mobile app requests
 app.add_middleware(
@@ -267,16 +284,24 @@ def load_model_and_classes():
     
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
     
     # Load model architecture
     model = models.resnet101(weights=None)
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 120)  # 120 dog breeds
     
-    # Load trained weights
-    model.load_state_dict(torch.load('../models/best_model.pth', map_location=device))
+    # Load trained weights using absolute path
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Model file not found at {MODEL_PATH}\n"
+            f"Please ensure the model file exists at: {MODEL_PATH}"
+        )
+    
+    model.load_state_dict(torch.load(str(MODEL_PATH), map_location=device))
     model.to(device)
     model.eval()
+    print(f"✓ Model loaded from: {MODEL_PATH}")
     
     # Define the same transform used during training
     transform = transforms.Compose([
@@ -290,14 +315,18 @@ def load_model_and_classes():
     try:
         # Create a temporary dataset to get the class names in correct order
         temp_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
-        temp_dataset = ImageFolder(root='../Images', transform=temp_transform)
+        
+        if not IMAGES_PATH.exists():
+            raise FileNotFoundError(f"Images directory not found at {IMAGES_PATH}")
+        
+        temp_dataset = ImageFolder(root=str(IMAGES_PATH), transform=temp_transform)
         classes = temp_dataset.classes
-        print(f" Loaded {len(classes)} classes from dataset in correct order")
-        print(f"First few classes: {classes[:5]}")
-        print(f"Last few classes: {classes[-5:]}")
+        print(f"✓ Loaded {len(classes)} classes from dataset in correct order")
+        print(f"  First few classes: {classes[:5]}")
+        print(f"  Last few classes: {classes[-5:]}")
     except Exception as e:
-        print(f" Error loading classes from dataset: {e}")
-        print(" Falling back to hardcoded class list (may cause prediction errors)")
+        print(f"⚠ Error loading classes from dataset: {e}")
+        print("⚠ Falling back to hardcoded class list (may cause prediction errors)")
         # Fallback to hardcoded list
         classes = [
             "Chihuahua", "Japanese spaniel", "Maltese dog", "Pekinese", "Shih-Tzu",
@@ -326,11 +355,7 @@ def load_model_and_classes():
             "standard poodle", "Mexican hairless", "dingo", "dhole", "African hunting dog"
         ]
 
-# Load model when the server starts
-@app.on_event("startup")
-async def startup_event():
-    load_model_and_classes()
-    print("Model loaded successfully!")
+# Model is now loaded via the lifespan context manager above
 
 # Health check endpoint
 @app.get("/")
