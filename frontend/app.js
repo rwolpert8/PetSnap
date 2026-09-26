@@ -151,7 +151,9 @@ async function predict() {
     const response = await fetch('/api/demo/predict', { method: 'POST', body: form, signal: controller.signal });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error(typeof data?.detail === 'string' ? data.detail : 'The model is unavailable right now. Please try again in a moment.');
+      const message = typeof data?.detail === 'string' ? data.detail : 'The model is unavailable right now. Please try again in a moment.';
+      const retry = Number(response.headers.get('Retry-After'));
+      throw new Error(message + (Number.isFinite(retry) && retry > 0 ? ` Try again in ${Math.ceil(retry)} seconds.` : ''));
     }
     if (version !== selectionVersion) return;
     if (!data) throw new Error('The model returned an unexpected result. Please try again.');

@@ -5,10 +5,11 @@ import base64
 import binascii
 import os
 import secrets
+import logging
 
 import requests
 from bs4 import BeautifulSoup
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Header
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Header, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -16,8 +17,10 @@ import uvicorn
 
 if __package__:
     from .inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy
+    from .public_demo import PublicDemoGuard
 else:  # Also support python api/api_server.py.
     from inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy
+    from public_demo import PublicDemoGuard
 
 API_KEY = os.getenv("DOG_CLASSIFIER_API_KEY")
 
@@ -28,6 +31,7 @@ async def lifespan(app: FastAPI):
     del app.state.classifier
 
 app = FastAPI(title="PetSnap", version="2.0.0", lifespan=lifespan)
+app.add_middleware(PublicDemoGuard)
 origins = [origin.strip() for origin in os.getenv("PETSNAP_CORS_ORIGINS", "").split(",") if origin.strip()]
 if origins:
     app.add_middleware(CORSMiddleware, allow_origins=origins,
@@ -53,6 +57,10 @@ async def run_prediction(data: bytes):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except InferenceBusy as exc:
         raise HTTPException(status_code=503, detail=str(exc), headers={"Retry-After": "2"}) from exc
+    except Exception:
+        # Do not disclose internal paths, checkpoint details, or input data.
+        logging.getLogger(__name__).error("Prediction failed unexpectedly")
+        raise HTTPException(status_code=500, detail="PetSnap couldn’t process this photo. Please try again.") from None
 
 # Fetch breed information from AKC website
 def get_akc_breed_info(breed_name):
@@ -270,8 +278,11 @@ async def get_classes():
     return {"classes": app.state.classifier.classes, "total_classes": len(app.state.classifier.classes)}
 
 @app.post("/api/demo/predict")
-async def demo_predict(file: UploadFile = File(...)):
+async def demo_predict(request: Request, file: UploadFile = File(...)):
     # Intentionally public: browser clients must never contain a secret API key.
+    form = await request.form()
+    if len(form.multi_items()) != 1:
+        raise HTTPException(status_code=400, detail="Upload exactly one photo using the file field.")
     return await run_prediction(await read_upload(file))
 
 @app.post("/predict", dependencies=[Depends(verify_api_key_header)])

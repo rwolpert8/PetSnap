@@ -53,11 +53,51 @@ They do not require the training dataset or retrieve any external breed data.
   The same-origin demo needs no CORS configuration.
 - `PORT`: used when launching `python api/api_server.py` directly.
 
-Before public hosting, configure request-body limits at the proxy (including
-multipart overhead), per-client rate limits, HTTPS, and resource monitoring.
-The application checks image bytes after multipart parsing; it is not a
-replacement for an ingress request-body limit. This change builds and tests
-the local demo; it does not publish a service.
+## Public endpoint protections
+
+`POST /api/demo/predict` accepts exactly one multipart `file` without an API key.
+The same response contract supplies `predicted_breed`, `confidence`, and
+`top_5_predictions`. Photos are neither logged nor retained by application code.
+
+The public request guard runs before multipart parsing:
+
+- 10 attempts per client IP in a rolling 60-second window. Invalid and busy
+  attempts also count. Throttled requests receive 429 and `Retry-After`.
+- 10 MiB plus 64 KiB multipart overhead per request, enforced against actual
+  streamed bytes even without `Content-Length`. The image itself is still
+  limited to 10 MiB and 20 million pixels. Oversize uploads receive 413.
+- A 20-second deadline to receive the complete upload; slow uploads receive 408.
+- At most two active public requests (including upload and inference) per
+  process. Excess traffic gets 503 with `Retry-After`, without reading its body.
+  Model execution remains limited to one prediction at a time.
+- Client rate-limit state is bounded to 10,000 active addresses and expires
+  after inactivity. Capacity exhaustion receives a retryable 503.
+- Prediction responses use `Cache-Control: no-store`; unexpected failures
+  return a generic 500 without exposing internal paths or exception text.
+
+The browser displays rate-limit and busy retry delays. The protections cover
+the public demo route, including its trailing-slash variant. Legacy prediction
+routes remain API-key protected and should be restricted at the hosting proxy
+if they are not needed by the demo.
+
+### Hosting configuration
+
+Use **one Uvicorn worker** for this deployment. Limits and model memory are
+per process; multiple workers or replicas require shared rate limiting and
+capacity controls at the ingress. People on a shared public IP share a quota.
+
+The guard uses the ASGI client address; it never reads `X-Forwarded-For` itself.
+Configure Uvicorn to trust forwarding headers **only from your hosting proxy's
+known addresses**, and block direct access to the origin. Do not blindly set
+`--forwarded-allow-ips '*'`: an untrusted forwarding header must not allow a
+visitor to choose their own rate-limit identity. With forwarding disabled,
+requests arriving through a proxy share that proxy's quota.
+
+At the host, also enforce HTTPS, ingress body limits of 10 MiB + 64 KiB,
+connection/upload timeouts, and connection-rate limits. Monitor CPU, memory,
+and error rates. Application safeguards bound admitted work but cannot replace
+network-level abuse protection. The endpoint is prepared locally; no service
+has been published by this change.
 
 ## Photo credits and limitations
 

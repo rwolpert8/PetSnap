@@ -77,6 +77,20 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["predicted_breed"], "Golden Retriever")
 
+    def test_unexpected_failure_does_not_leak_details(self):
+        with patch.object(api_server.app.state.classifier, "predict", side_effect=RuntimeError("private/checkpoint/path")):
+            response = self.client.post("/api/demo/predict", files={"file": ("dog.jpg", b"test", "image/jpeg")})
+        self.assertEqual(response.status_code, 500)
+        self.assertNotIn("private/checkpoint/path", response.text)
+        self.assertEqual(response.headers["cache-control"], "no-store")
+
+    def test_extra_files_are_rejected(self):
+        response = self.client.post("/api/demo/predict", files=[
+            ("file", ("dog.jpg", b"test", "image/jpeg")),
+            ("file", ("dog2.jpg", b"test", "image/jpeg")),
+        ])
+        self.assertEqual(response.status_code, 400)
+
 
 class ImageAndLabelTests(unittest.TestCase):
     def test_invalid_label_manifest_fails(self):
