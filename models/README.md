@@ -10,17 +10,27 @@ This folder contains the trained model weights for the PetSnap dog breed classif
   - Size: ~170 MB
   - Input: 224x224 RGB images
   - Output: 120-class probability distribution
+- **`classes.json`** - The 120 breed names in model-output index order. This file
+  is tracked in Git and required at startup. It was exported from the current
+  dataset folder names using the same case-sensitive sorting as `ImageFolder`.
 
 ## Training
 
-The model is trained using [PetSnap_NN.ipynb](../src/PetSnap_NN.ipynb) and automatically saved to this folder during training.
+The model is trained using [PetSnap_NN.ipynb](../src/PetSnap_NN.ipynb). Each best
+checkpoint save now also writes `full_dataset.classes` to `classes.json`.
+Keep the checkpoint and this label file together; changing label order silently
+changes the meaning of predictions. Existing weights cannot reveal breed names
+on their own, so do not regenerate this mapping from a different dataset layout.
 
 ## Usage
 
-The model is loaded by the API server in `api/api_server.py`:
+The API uses `api/inference.py` to load the model once at startup:
 
 ```python
-model.load_state_dict(torch.load('../models/best_model.pth', map_location=device))
+from api.inference import Classifier
+
+classifier = Classifier()
+prediction = classifier.predict(open('dog.jpg', 'rb').read())
 ```
 
 ## Model Details
@@ -38,4 +48,8 @@ model.load_state_dict(torch.load('../models/best_model.pth', map_location=device
 
 ## Git Ignore
 
-This folder is excluded from git version control (see `.gitignore`) to avoid committing large model files to the repository.
+Only weight files are excluded from Git (see `.gitignore`); documentation and
+`classes.json` are tracked. A deployment needs the weights and labels, not the
+`Images/` training dataset. Paths can be overridden with `PETSNAP_MODEL_PATH`
+and `PETSNAP_CLASSES_PATH`. Missing or invalid labels fail startup instead of
+falling back to a potentially incorrect ordering.

@@ -1,77 +1,59 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Header
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+"""PetSnap API and browser demo. Run from the repository root with uvicorn."""
 from contextlib import asynccontextmanager
-import torch
-import torch.nn as nn
-import torchvision.models as models
-import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
-from PIL import Image
-import io
-import json
-import os
+from typing import List, Optional
 import base64
+import binascii
+import os
+import secrets
+
 import requests
 from bs4 import BeautifulSoup
-import re
-from typing import Dict, List, Optional
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Header
+from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
-from pathlib import Path
 
-# Security
-security = HTTPBearer()
+if __package__:
+    from .inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy
+else:  # Also support python api/api_server.py.
+    from inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy
 
-# API Key Configuration
-API_KEY = os.getenv("DOG_CLASSIFIER_API_KEY", "KWkKo1HmrQ3UWm9SvhOk3g8OgT4qcEPX")
+API_KEY = os.getenv("DOG_CLASSIFIER_API_KEY")
 
-# Get the base directory (parent of api folder)
-BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "models" / "best_model.pth"
-IMAGES_PATH = BASE_DIR / "Images"
-
-# Lifespan context manager for startup/shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Load model
-    load_model_and_classes()
-    print("✓ Model loaded successfully!")
+    app.state.classifier = await run_in_threadpool(Classifier)
     yield
-    # Shutdown: Cleanup (if needed)
-    print("Shutting down...")
+    del app.state.classifier
 
-app = FastAPI(title="Dog Breed Classifier API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="PetSnap", version="2.0.0", lifespan=lifespan)
+origins = [origin.strip() for origin in os.getenv("PETSNAP_CORS_ORIGINS", "").split(",") if origin.strip()]
+if origins:
+    app.add_middleware(CORSMiddleware, allow_origins=origins,
+                       allow_methods=["GET", "POST"], allow_headers=["X-API-Key", "Content-Type"])
 
-# CORS middleware for mobile app requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Global variables for model and classes
-model = None
-device = None
-transform = None
-classes = None
-
-# Verify API key from Authorization header
-def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    if credentials.credentials != API_KEY:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid API key",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return credentials.credentials
-
-# Alternative: Verify API key from X-API-Key header
 def verify_api_key_header(x_api_key: Optional[str] = Header(None)):
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    return x_api_key
+    if not API_KEY or not secrets.compare_digest(x_api_key or "", API_KEY):
+        raise HTTPException(status_code=401, detail="A configured API key is required.")
+
+async def read_upload(file: UploadFile):
+    try:
+        data = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Choose an image smaller than 10 MB.")
+        return data
+    finally:
+        await file.close()
+
+async def run_prediction(data: bytes):
+    try:
+        return await run_in_threadpool(app.state.classifier.predict, data)
+    except InvalidImage as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except InferenceBusy as exc:
+        raise HTTPException(status_code=503, detail=str(exc), headers={"Retry-After": "2"}) from exc
+
 # Fetch breed information from AKC website
 def get_akc_breed_info(breed_name):
     try:
@@ -278,323 +260,75 @@ def get_akc_breed_info(breed_name):
             "success": False
         }
 
-# Load the trained model and class names
-def load_model_and_classes():
-    global model, device, transform, classes
-    
-    # Set device
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-    
-    # Load model architecture
-    model = models.resnet101(weights=None)
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Linear(num_ftrs, 120)  # 120 dog breeds
-    
-    # Load trained weights using absolute path
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            f"Model file not found at {MODEL_PATH}\n"
-            f"Please ensure the model file exists at: {MODEL_PATH}"
-        )
-    
-    model.load_state_dict(torch.load(str(MODEL_PATH), map_location=device))
-    model.to(device)
-    model.eval()
-    print(f"✓ Model loaded from: {MODEL_PATH}")
-    
-    # Define the same transform used during training
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-    
-    # Load class names in the same order as during training
-    try:
-        # Create a temporary dataset to get the class names in correct order
-        temp_transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
-        
-        if not IMAGES_PATH.exists():
-            raise FileNotFoundError(f"Images directory not found at {IMAGES_PATH}")
-        
-        temp_dataset = ImageFolder(root=str(IMAGES_PATH), transform=temp_transform)
-        classes = temp_dataset.classes
-        print(f"✓ Loaded {len(classes)} classes from dataset in correct order")
-        print(f"  First few classes: {classes[:5]}")
-        print(f"  Last few classes: {classes[-5:]}")
-    except Exception as e:
-        print(f"⚠ Error loading classes from dataset: {e}")
-        print("⚠ Falling back to hardcoded class list (may cause prediction errors)")
-        # Fallback to hardcoded list
-        classes = [
-            "Chihuahua", "Japanese spaniel", "Maltese dog", "Pekinese", "Shih-Tzu",
-            "Blenheim spaniel", "papillon", "toy terrier", "Rhodesian ridgeback", "Afghan hound",
-            "basset", "beagle", "bloodhound", "bluetick", "black-and-tan coonhound",
-            "Walker hound", "English foxhound", "redbone", "borzoi", "Irish wolfhound",
-            "Italian greyhound", "whippet", "Ibizan hound", "Norwegian elkhound", "otterhound",
-            "Saluki", "Scottish deerhound", "Weimaraner", "Staffordshire bullterrier", "American Staffordshire terrier",
-            "Bedlington terrier", "Border terrier", "Kerry blue terrier", "Irish terrier", "Norfolk terrier",
-            "Norwich terrier", "Yorkshire terrier", "wire-haired fox terrier", "Lakeland terrier", "Sealyham terrier",
-            "Airedale", "cairn", "Australian terrier", "Dandie Dinmont", "Boston bull",
-            "miniature schnauzer", "giant schnauzer", "standard schnauzer", "Scotch terrier", "Tibetan terrier",
-            "silky terrier", "soft-coated wheaten terrier", "West Highland white terrier", "Lhasa", "flat-coated retriever",
-            "curly-coated retriever", "golden retriever", "Labrador retriever", "Chesapeake Bay retriever", "German short-haired pointer",
-            "vizsla", "English setter", "Irish setter", "Gordon setter", "Brittany spaniel",
-            "clumber", "English springer", "Welsh springer spaniel", "cocker spaniel", "Sussex spaniel",
-            "Irish water spaniel", "kuvasz", "schipperke", "groenendael", "malinois",
-            "briard", "kelpie", "komondor", "Old English sheepdog", "Shetland sheepdog",
-            "collie", "Border collie", "Bouvier des Flandres", "Rottweiler", "German shepherd",
-            "Doberman", "miniature pinscher", "Greater Swiss Mountain dog", "Bernese mountain dog", "Appenzeller",
-            "EntleBucher", "boxer", "bull mastiff", "Tibetan mastiff", "French bulldog",
-            "Great Dane", "Saint Bernard", "Eskimo dog", "malamute", "Siberian husky",
-            "affenpinscher", "basenji", "pug", "Leonberg", "Newfoundland",
-            "Great Pyrenees", "Samoyed", "Pomeranian", "chow", "keeshond",
-            "Brabancon griffon", "Pembroke", "Cardigan", "toy poodle", "miniature poodle",
-            "standard poodle", "Mexican hairless", "dingo", "dhole", "African hunting dog"
-        ]
 
-# Model is now loaded via the lifespan context manager above
+@app.get("/health")
+async def health():
+    return {"status": "ready", "classes": len(app.state.classifier.classes)}
 
-# Health check endpoint
-@app.get("/")
-async def root():
-    return {"message": "Dog Breed Classifier API is running!"}
-
-
-# Get all available dog breed classes
 @app.get("/classes")
 async def get_classes():
-    return {"classes": classes, "total_classes": len(classes)}
+    return {"classes": app.state.classifier.classes, "total_classes": len(app.state.classifier.classes)}
 
-# Debug endpoint to check class order and indices
-@app.get("/debug/classes")
-async def debug_classes():
-    if classes is None:
-        return {"error": "Classes not loaded yet"}
-    
-    debug_info = {
-        "total_classes": len(classes),
-        "first_10_classes": [(i, classes[i]) for i in range(min(10, len(classes)))],
-        "last_10_classes": [(i, classes[i]) for i in range(max(0, len(classes)-10), len(classes))],
-        "sample_indices": {
-            "affenpinscher": classes.index("affenpinscher") if "affenpinscher" in classes else "not found",
-            "yorkshire_terrier": classes.index("yorkshire_terrier") if "yorkshire_terrier" in classes else "not found",
-            "Yorkshire_terrier": classes.index("Yorkshire_terrier") if "Yorkshire_terrier" in classes else "not found"
-        }
-    }
-    return debug_info
+@app.post("/api/demo/predict")
+async def demo_predict(file: UploadFile = File(...)):
+    # Intentionally public: browser clients must never contain a secret API key.
+    return await run_prediction(await read_upload(file))
 
-# Test endpoint to check AKC information fetching for a specific breed
-@app.get("/debug/akc/{breed_name}")
-async def debug_akc_info(breed_name: str):
-    
-    breed_info = get_akc_breed_info(breed_name)
-    return {
-        "breed_name": breed_name,
-        "about_breed": breed_info["about_breed"],
-        "akc_url": breed_info["akc_url"],
-        "success": breed_info["success"],
-        "timestamp": "2025-07-16"
-    }
+@app.post("/predict", dependencies=[Depends(verify_api_key_header)])
+async def predict_breed(file: UploadFile = File(...)):
+    return await run_prediction(await read_upload(file))
 
-# Predict dog breed from uploaded image - Requires API key
-@app.post("/predict")
-async def predict_breed(file: UploadFile = File(...), api_key: str = Depends(verify_api_key_header)):
-    try:
-        # Validate file type
-        if file.content_type and not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="File must be an image")
-        
-        # Additional validation - check if it's a valid image by trying to open it
-        image_data = await file.read()
-        try:
-            image = Image.open(io.BytesIO(image_data)).convert('RGB')
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid image file")
-        
-        # Apply transforms
-        input_tensor = transform(image).unsqueeze(0).to(device)
-        
-        # Make prediction
-        with torch.no_grad():
-            outputs = model(input_tensor)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted_idx = torch.max(probabilities, 1)
-            
-            # Get top 5 predictions
-            top5_prob, top5_idx = torch.topk(probabilities, 5, dim=1)
-            
-            top5_predictions = []
-            for i in range(5):
-                breed = classes[top5_idx[0][i].item()]
-                prob = top5_prob[0][i].item()
-                top5_predictions.append({
-                    "breed": breed,
-                    "confidence": round(prob * 100, 2)
-                })
-        
-        return {
-            "success": True,
-            "predicted_breed": classes[predicted_idx.item()],
-            "confidence": round(confidence.item() * 100, 2),
-            "top_5_predictions": top5_predictions
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
-    
-# Predict dog breeds for multiple images
-@app.post("/predict_batch")
+@app.post("/predict_batch", dependencies=[Depends(verify_api_key_header)])
 async def predict_batch(files: List[UploadFile] = File(...)):
-    if len(files) > 10:  # Limit batch size
+    if len(files) > 10:
+        for file in files:
+            await file.close()
         raise HTTPException(status_code=400, detail="Maximum 10 images per batch")
-    
     results = []
-    for file in files:
-        try:
-            # Process each image
-            image_data = await file.read()
-            image = Image.open(io.BytesIO(image_data)).convert('RGB')
-            input_tensor = transform(image).unsqueeze(0).to(device)
-            
-            with torch.no_grad():
-                outputs = model(input_tensor)
-                probabilities = torch.softmax(outputs, dim=1)
-                confidence, predicted_idx = torch.max(probabilities, 1)
-                
-            results.append({
-                "filename": file.filename,
-                "predicted_breed": classes[predicted_idx.item()],
-                "confidence": round(confidence.item() * 100, 2)
-            })
-            
-        except Exception as e:
-            results.append({
-                "filename": file.filename,
-                "error": str(e)
-            })
-    
+    try:
+        for file in files:
+            filename = file.filename
+            try:
+                prediction = await run_prediction(await read_upload(file))
+                results.append({"filename": filename, "predicted_breed": prediction["predicted_breed"],
+                                "confidence": prediction["confidence"]})
+            except HTTPException as exc:
+                results.append({"filename": filename, "error": exc.detail})
+    finally:
+        for file in files:
+            await file.close()
     return {"results": results}
 
-# Identify dog breed from uploaded image - Google Gemini compatible endpoint
-@app.post("/api/identify")
-async def identify_breed(file: UploadFile = File(...), api_key: str = Depends(verify_api_key_header)):
+@app.post("/api/identify", dependencies=[Depends(verify_api_key_header)])
+async def identify_breed(file: UploadFile = File(...)):
+    prediction = await run_prediction(await read_upload(file))
+    return {"status": "success", "result": {"breed": prediction["predicted_breed"],
+            "confidence": prediction["confidence"], "alternatives": [
+                {"name": item["breed"], "confidence": item["confidence"]}
+                for item in prediction["top_5_predictions"]]}}
+
+@app.post("/identify", dependencies=[Depends(verify_api_key_header)])
+async def identify_animal(request: dict):
+    value = request.get("imageDataUrl")
+    if not isinstance(value, str) or not value.startswith("data:image/") or "," not in value:
+        raise HTTPException(status_code=400, detail="A valid imageDataUrl is required")
+    if len(value) > (MAX_UPLOAD_BYTES * 4 // 3) + 1024:
+        raise HTTPException(status_code=413, detail="Choose an image smaller than 10 MB.")
     try:
-        # Validate file type
-        if file.content_type and not file.content_type.startswith('image/'):
-            raise HTTPException(status_code=400, detail="File must be an image")
-        
-        # Additional validation
-        image_data = await file.read()
-        try:
-            image = Image.open(io.BytesIO(image_data)).convert('RGB')
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid image file")
-        
-        # Apply transforms
-        input_tensor = transform(image).unsqueeze(0).to(device)
-        
-        # Make prediction
-        with torch.no_grad():
-            outputs = model(input_tensor)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted_idx = torch.max(probabilities, 1)
-            
-            # Get top 5 predictions
-            top5_prob, top5_idx = torch.topk(probabilities, 5, dim=1)
-            
-            top5_predictions = []
-            for i in range(5):
-                breed = classes[top5_idx[0][i].item()]
-                prob = top5_prob[0][i].item()
-                top5_predictions.append({
-                    "name": breed,
-                    "confidence": round(prob * 100, 2)
-                })
-        
-        return {
-            "status": "success",
-            "result": {
-                "breed": classes[predicted_idx.item()],
-                "confidence": round(confidence.item() * 100, 2),
-                "alternatives": top5_predictions
-            }
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Identification failed: {str(e)}")
-    
-# Identify animal from base64 image data - Google Gemini app compatible endpoint
-@app.post("/identify")
-async def identify_animal_gemini(request: dict, api_key: str = Depends(verify_api_key_header)):
-    try:
-        # Extract image data from request
-        if "imageDataUrl" not in request:
-            raise HTTPException(status_code=400, detail="Missing imageDataUrl in request")
-        
-        image_data_url = request["imageDataUrl"]
-        
-        # Parse base64 image data
-        if not image_data_url.startswith("data:image/"):
-            raise HTTPException(status_code=400, detail="Invalid image data URL format")
-        
-        # Extract base64 data
-        try:
-            header, base64_data = image_data_url.split(",", 1)
-            image_data = base64.b64decode(base64_data)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid base64 image data")
-        
-        # Process image
-        try:
-            image = Image.open(io.BytesIO(image_data)).convert('RGB')
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid image file")
-        
-        # Apply transforms
-        input_tensor = transform(image).unsqueeze(0).to(device)
-        
-        # Make prediction
-        with torch.no_grad():
-            outputs = model(input_tensor)
-            probabilities = torch.softmax(outputs, dim=1)
-            confidence, predicted_idx = torch.max(probabilities, 1)
-            
-            predicted_breed = classes[predicted_idx.item()]
-            confidence_score = confidence.item() * 100
-        
-        # Fetch real breed information from AKC
-        print(f"Fetching AKC info for: {predicted_breed}")
-        breed_info = get_akc_breed_info(predicted_breed)
-        
-        # Return in AnimalInfo format with real AKC data
-        return {
-            "animalName": predicted_breed,
-            "description": breed_info["about_breed"],  # Standard field name
-            "aboutThisDog": breed_info["about_breed"],  # Alternative field name
-            "confidence": f"Identified with {confidence_score:.1f}% confidence",
-            "learnMoreUrl": breed_info["akc_url"],
-            "funFacts": [f"This breed was identified with {confidence_score:.1f}% confidence."],
-            "sources": [
-                {
-                    "title": f"{predicted_breed} - American Kennel Club",
-                    "url": breed_info["akc_url"],
-                    "description": f"Official AKC information about the {predicted_breed} breed"
-                },
-                {
-                    "title": "Dog Breed Classification",
-                    "url": "https://en.wikipedia.org/wiki/Dog_breed",
-                    "description": "Learn more about dog breeds and their characteristics"
-                }
-            ]
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Identification failed: {str(e)}")
+        data = base64.b64decode(value.split(",", 1)[1], validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise HTTPException(status_code=400, detail="Invalid base64 image data") from exc
+    prediction = await run_prediction(data)
+    breed = prediction["predicted_breed"]
+    info = await run_in_threadpool(get_akc_breed_info, breed)
+    return {"animalName": breed, "description": info["about_breed"],
+            "aboutThisDog": info["about_breed"],
+            "confidence": f"Identified with {prediction['confidence']:.1f}% confidence",
+            "learnMoreUrl": info["akc_url"], "funFacts": [],
+            "sources": [{"title": f"{breed} - American Kennel Club", "url": info["akc_url"]}]}
+
+# Keep API routes ahead of the static app. Nothing in models/ or Images/ is exposed.
+app.mount("/", StaticFiles(directory=BASE_DIR / "frontend", html=True), name="web")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))

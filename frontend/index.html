@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#edf4ff">
+  <meta name="description" content="Meet the breed behind your best friend. Upload a dog photo and explore PetSnap's five closest breed matches, powered by a custom-trained ResNet101.">
+  <title>PetSnap — A little curiosity. A lot of dog.</title>
+  <link rel="icon" href="/assets/paw.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="paw" viewBox="0 0 32 32"><ellipse cx="7" cy="11" rx="3.1" ry="4.3" transform="rotate(-27 7 11)"/><ellipse cx="13" cy="6.8" rx="3" ry="4.1" transform="rotate(-8 13 7)"/><ellipse cx="20" cy="6.8" rx="3" ry="4.1" transform="rotate(10 20 7)"/><ellipse cx="26" cy="11" rx="3.1" ry="4.3" transform="rotate(27 26 11)"/><path d="M8 20c3-3 4-8 8-8s5 5 8 8c4 5 0 10-5 8-2-1-4-1-6 0-5 2-9-3-5-8Z"/></symbol>
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></symbol>
+    <symbol id="spark" viewBox="0 0 24 24"><path d="m12 3 2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3Z"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  </svg>
+  <a class="skip-link" href="#try-it">Skip to photo upload</a>
+  <header class="site-header wrap">
+    <a class="brand" href="/" aria-label="PetSnap home"><span class="brand-icon"><svg><use href="#paw"/></svg></span>pet<span>snap</span></a>
+    <nav aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#the-model">Behind the model</a><a class="nav-cta" href="#try-it">Meet your match <svg class="line-icon"><use href="#arrow"/></svg></a></nav>
+  </header>
+  <main>
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="status-dot"></span> FOR THE LOVE OF DOGS. AND A LITTLE SCIENCE.</div>
+        <h1 id="hero-title">Good dog.<br>Great mystery.<br><span>Let’s sniff it out.</span></h1>
+        <p class="hero-description">Those ears. That face. The unmistakable personality.<br class="desktop-break"> Get to know the breed behind your best friend, one photo at a time.</p>
+        <a class="button primary hero-button" href="#try-it">Find my dog’s breed <svg class="line-icon"><use href="#arrow"/></svg></a>
+        <div class="hero-footnote"><span class="mini-paws"><svg><use href="#paw"/></svg><svg><use href="#paw"/></svg></span> A little curiosity. A lot of dog.</div>
+      </div>
+      <div class="hero-art" aria-label="A golden retriever, one of the 120 breeds PetSnap recognizes">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <span class="art-spark spark-one">✳</span><span class="art-spark spark-two">✳</span>
+        <div class="dog-photo"><img src="/assets/golden.jpg" alt="A golden retriever standing proudly in a garden" fetchpriority="high"><div class="photo-caption"><span>THE ORIGINAL GOOD BOY</span><svg><use href="#paw"/></svg></div></div>
+        <div class="dog-sticker"><svg><use href="#paw"/></svg><span>100%<small>good dog</small></span></div>
+        <div class="breed-tag"><span class="tag-icon"><svg class="line-icon"><use href="#check"/></svg></span><span><small>MEET THE BREED</small><strong>Golden Retriever</strong></span><span class="tag-heart">♡</span></div>
+        <span class="art-note">a face worth getting to know ↗</span>
+      </div>
+    </section>
+    <div class="trust-strip wrap"><span><svg><use href="#paw"/></svg> Big ears. Small paws. <strong>120 possibilities.</strong></span><span>Custom-trained ResNet101</span><span>Built with curiosity, powered by PyTorch <span class="tiny-star">✳</span></span></div>
+
+    <section class="demo-section wrap" id="try-it" aria-labelledby="demo-title">
+      <div class="section-heading"><div><div class="eyebrow">LET’S PUT A NAME TO THAT FACE</div><h2 id="demo-title">Your dog. Our best guess.</h2></div><span class="section-note"><span class="status-dot"></span> No sign-up. Just a good photo.</span></div>
+      <div class="demo-grid">
+        <div class="upload-panel">
+          <div class="panel-heading"><span class="step-number">01</span><h3>Introduce your dog</h3><span class="small-label">PHOTO UPLOAD</span></div>
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" class="visually-hidden" tabindex="-1" aria-label="Choose a dog photo">
+          <button class="drop-zone" id="drop-zone" type="button" aria-label="Choose a dog photo, or drop an image here">
+            <span class="upload-empty" id="upload-empty"><span class="upload-icon"><svg class="line-icon"><use href="#upload"/></svg><span class="small-paw"><svg><use href="#paw"/></svg></span></span><strong>Drop your best friend here</strong><span>or <span class="text-link">browse photos</span></span><small>JPG, PNG or WebP · Up to 10 MB</small></span>
+            <span class="preview-content" id="preview-content" hidden><img id="preview-image" alt="Your selected dog photo"><span class="change-photo">Change photo <svg class="line-icon"><use href="#upload"/></svg></span></span>
+          </button>
+          <div class="selected-file" id="selected-file" hidden><span id="file-name"></span><button id="remove-photo" type="button" aria-label="Remove selected photo">Remove</button></div>
+          <div class="sample-heading"><span>Just looking? Try a familiar face.</span><span>↓</span></div>
+          <div class="samples" aria-label="Try a sample dog photo">
+            <button class="sample" type="button" data-sample="golden"><img src="/assets/golden.jpg" alt="" loading="lazy"><span>The golden one</span><svg class="line-icon"><use href="#arrow"/></svg></button>
+            <button class="sample" type="button" data-sample="beagle"><img src="/assets/beagle.jpg" alt="" loading="lazy"><span>The little snoop</span><svg class="line-icon"><use href="#arrow"/></svg></button>
+            <button class="sample" type="button" data-sample="husky"><img src="/assets/husky.jpg" alt="" loading="lazy"><span>The snow lover</span><svg class="line-icon"><use href="#arrow"/></svg></button>
+          </div>
+          <button id="predict-button" class="button primary predict-button" type="button" disabled><svg class="line-icon"><use href="#spark"/></svg><span id="predict-label">Find my dog’s breed</span><svg class="line-icon button-arrow"><use href="#arrow"/></svg></button>
+          <p class="error-message" id="error-message" role="alert" hidden></p>
+          <p class="privacy-note"><svg class="line-icon"><use href="#check"/></svg> Your photo is used for this prediction, then discarded.</p>
+        </div>
+        <div class="result-panel" id="result-panel" aria-busy="false">
+          <div class="panel-heading"><span class="step-number">02</span><h3>Meet the possibilities</h3><span class="small-label">TOP 5 MATCHES</span></div>
+          <div class="result-empty" id="result-empty"><div class="empty-illustration" aria-hidden="true"><svg viewBox="0 0 180 155" fill="none"><path d="M53 51 36 29C24 26 13 60 20 81c4 11 17 12 30-3M127 51l17-22c12-3 23 31 16 52-4 11-17 12-30-3" fill="#bad1ff" stroke="#4779d7" stroke-width="2.4"/><path d="M42 68c0-31 18-46 48-46s48 15 48 46v28c0 26-19 42-48 42s-48-16-48-42V68Z" fill="#e5eeff" stroke="#4779d7" stroke-width="2.4"/><path d="M73 111c6 10 28 10 34 0" stroke="#4779d7" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="68" cy="79" rx="4" ry="5" fill="#244d95"/><ellipse cx="112" cy="79" rx="4" ry="5" fill="#244d95"/><path d="M83 97c0-5 14-5 14 0 0 4-5 8-7 8s-7-4-7-8Z" fill="#244d95"/><path d="M90 105v9" stroke="#244d95" stroke-width="2.4"/><path d="m146 119 3 8 8 3-8 3-3 8-3-8-8-3 8-3 3-8ZM30 8l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z" fill="#4779d7"/></svg><span class="question-bubble">?</span></div><h3>A familiar face.<br>A new discovery.</h3><p>Add a photo and we’ll fetch the five breeds<br>that look most like your dog.</p><span class="waiting-label"><span></span> WAITING FOR A GOOD DOG</span></div>
+          <div id="result-loading" class="result-loading" hidden><span class="loading-paw"><svg><use href="#paw"/></svg></span><h3>Following our nose…</h3><p>Looking for familiar ears, faces, and features.</p><span class="loading-track"></span></div>
+          <div id="result-content" class="result-content" hidden><div class="match-eyebrow"><svg class="line-icon"><use href="#spark"/></svg> CLOSEST MATCH</div><h3 id="top-breed"></h3><div class="top-score"><strong id="top-score"></strong><span>model score</span><span class="result-badge">Best match</span></div><div id="prediction-list" class="prediction-list"></div><p class="result-caveat" id="result-caveat"></p><button type="button" class="text-button" id="try-another">Meet another dog <svg class="line-icon"><use href="#arrow"/></svg></button></div>
+          <p class="result-footer"><svg><use href="#paw"/></svg> Whatever the breed, definitely a good dog.</p>
+        </div>
+      </div>
+      <p class="demo-disclaimer">A curious guess, not a pedigree. PetSnap compares appearances across 120 breeds; it doesn’t determine ancestry or mixed-breed percentages.</p>
+      <p class="visually-hidden" id="announcement" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="how-section wrap" id="how-it-works" aria-labelledby="how-title"><div class="how-intro"><div class="eyebrow">LESS GUESSWORK. MORE TAIL WAGS.</div><h2 id="how-title">Three steps.<br>One new discovery.</h2></div><div class="how-step"><span>01 / SNAP</span><h3>Catch their good side.</h3><p>A clear photo of one dog works best. Get their face and body in the frame.</p></div><div class="how-step"><span>02 / SNIFF</span><h3>Let the model look.</h3><p>Our neural network compares visual features learned from thousands of dog photos.</p></div><div class="how-step"><span>03 / DISCOVER</span><h3>Meet the matches.</h3><p>Explore five possible breeds, with model scores showing how the predictions compare.</p></div></section>
+
+    <section class="model-section wrap" id="the-model" aria-labelledby="model-title"><div class="model-copy"><div class="eyebrow">A PET PROJECT. SERIOUSLY.</div><h2 id="model-title">Dog person.<br>Data person.<br><span>Why not both?</span></h2><p>PetSnap is an independent machine learning project exploring what a neural network can learn about our four-legged friends.</p><a href="https://github.com/rwolpert8/PetSnap" class="github-link" target="_blank" rel="noopener noreferrer">Explore the project on GitHub <svg class="line-icon"><use href="#arrow"/></svg></a></div><div class="model-details"><div class="model-metric"><span>THE ARCHITECTURE</span><strong>ResNet<span>101</span></strong><p>Pretrained on ImageNet. Fine-tuned for dogs.</p></div><div class="model-metric-row"><div><strong>120</strong><span>BREED CLASSES</span></div><div><strong>20,580</strong><span>DATASET PHOTOS</span></div></div><details><summary>A little more about the model <span>+</span></summary><p>Trained on the Stanford Dogs dataset with PyTorch. A photo is resized and center-cropped before the model returns five ranked breed predictions. Scores reflect the model’s output, not a guarantee of a correct identification.</p><p>The example photos come from the training dataset and are for demonstration, not an independent accuracy test. Unfamiliar breeds, mixed breeds, and non-dog images can produce confident but incorrect results.</p></details></div></section>
+  </main>
+  <footer class="site-footer wrap"><a class="brand footer-brand" href="/">pet<span>snap</span><svg><use href="#paw"/></svg></a><span>Made for curious humans and very good dogs.</span><a href="https://vision.stanford.edu/aditya86/ImageNetDogs/" target="_blank" rel="noopener noreferrer">Dataset & photo credits ↗</a></footer>
+</body>
+</html>

@@ -93,3 +93,7 @@ Thumbs.db
 secrets.json
 api_keys.txt
 credentials.json
+
+# Local verification dependencies and screenshots
+.runtime/
+.artifacts/

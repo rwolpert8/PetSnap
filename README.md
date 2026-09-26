@@ -48,73 +48,39 @@ User → Mobile/Web App → FastAPI Server → ResNet101 Model
 
 For detailed architecture information, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Quick Start
+## Run the Web Demo
 
-### Prerequisites
+The new responsive browser demo includes photo upload, image preview, three
+sample dogs, and five ranked breed predictions. FastAPI serves the interface
+and model from a single process; no frontend build or API key is needed.
 
-- Python 3.8 or higher
-- CUDA-compatible GPU (recommended)
-- 8GB+ RAM
+With Python 3.10+ and the trained checkpoint at `models/best_model.pth`:
 
-### Installation
-
-1. **Clone the repository**
 ```bash
-git clone https://github.com/rwolpert8/PetSnap.git
-cd PetSnap
+python -m pip install -r requirements-inference.txt
+python -m uvicorn api.api_server:app --host 127.0.0.1 --port 8000
 ```
 
-2. **Create virtual environment**
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+Open **http://127.0.0.1:8000**. The local checkpoint is excluded from Git, so a
+fresh clone needs a copy of your trained weights. Keep the tracked
+`models/classes.json` beside it. **The demo does not require the training
+dataset or retraining.**
 
-3. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
+See [frontend/README.md](frontend/README.md) for setup, configuration, tests,
+photo credits, and the remaining public-hosting steps. The existing Expo
+mobile project remains separate in `mobile-app/`.
 
-Or install packages individually:
-```bash
-pip install torch torchvision
-pip install fastapi uvicorn
-pip install pillow requests beautifulsoup4 seaborn
-pip install scikit-learn matplotlib numpy tqdm
-```
-
-4. **Download the Stanford Dogs Dataset**
-```bash
-# Download from: http://vision.stanford.edu/adastra/stanford-dogs/
-# Extract to: ./Images/
-```
-
-5. **Train the model**
-```bash
-# Open src/PetSnap_NN.ipynb in Jupyter Notebook or VS Code
-# Run all cells to train the model
-# This will create 'models/best_model.pth'
-```
-
-6. **Set API key** (optional - default is "KWkKo1HmrQ3UWm9SvhOk3g8OgT4qcEPX")
-```bash
-export DOG_CLASSIFIER_API_KEY="your_secure_api_key"  # Linux/Mac
-set DOG_CLASSIFIER_API_KEY=your_secure_api_key      # Windows
-```
-
-7. **Start the API server**
-```bash
-cd api
-python api_server.py
-```
-
-The server will be available at `http://localhost:8000`
+To train a new model, install `requirements.txt`, obtain the Stanford Dogs
+dataset in `Images/`, and run `src/PetSnap_NN.ipynb`. The notebook saves the
+ordered class labels alongside every best checkpoint.
 
 ## API Documentation
 
 ### Authentication
 
-All prediction endpoints require API key authentication. Include the API key in the request header:
+The browser uses the public `POST /api/demo/predict` endpoint. Legacy prediction
+endpoints require `DOG_CLASSIFIER_API_KEY` to be explicitly configured on the
+server; there is no built-in key. Include it in the request header:
 
 ```
 X-API-Key: your_api_key_here
@@ -122,15 +88,16 @@ X-API-Key: your_api_key_here
 
 ### Endpoints
 
-#### **GET /** - Health Check
+#### **GET /health** - Health Check
 ```bash
-curl http://localhost:8000/
+curl http://localhost:8000/health
 ```
 
 Response:
 ```json
 {
-  "message": "Dog Breed Classifier API is running!"
+  "status": "ready",
+  "classes": 120
 }
 ```
 
@@ -212,6 +179,7 @@ Response:
 #### **POST /predict_batch** - Batch Prediction (Max 10 images)
 ```bash
 curl -X POST http://localhost:8000/predict_batch \
+  -H "X-API-Key: your_api_key" \
   -F "files=@dog1.jpg" \
   -F "files=@dog2.jpg"
 ```
@@ -260,7 +228,7 @@ PetSnap/
 │   └── api_server.py               # FastAPI server implementation
 ├── src/                            # Source code and utilities
 │   └── PetSnap_NN.ipynb            # Model training notebook
-├── frontend/                       # Frontend application (placeholder for future development)
+├── frontend/                       # Responsive browser demo, served by FastAPI
 ├── models/                         # Trained model weights
 │   └── best_model.pth              # ResNet101 trained model
 ├── results/                        # Training results and performance visualizations
@@ -281,11 +249,14 @@ PetSnap/
 
 ### Environment Variables
 
-- `DOG_CLASSIFIER_API_KEY`: API key for authentication (default: "KWkKo1HmrQ3UWm9SvhOk3g8OgT4qcEPX")
+- `DOG_CLASSIFIER_API_KEY`: Required for legacy authenticated API routes; no default.
+- `PETSNAP_MODEL_PATH`: Optional path to the trained checkpoint.
+- `PETSNAP_CLASSES_PATH`: Optional path to its ordered labels JSON.
+- `PETSNAP_CORS_ORIGINS`: Optional comma-separated allowed origins for separate clients.
 
 ### Model Configuration
 
-Edit `api/api_server.py` to modify:
+See `api/inference.py` for:
 - Model architecture
 - Input image size
 - Normalization parameters
