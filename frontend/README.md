@@ -108,7 +108,7 @@ in this project. Original dataset filenames:
 - `beagle.jpg`: `Beagle/n02088364_10108.jpg`
 - `husky.jpg`: `Siberian Husky/n02110185_10047.jpg`
 
-Dataset: https://vision.stanford.edu/aditya86/ImageNetDogs/
+Dataset: https://www.kaggle.com/datasets/jessicali9530/stanford-dogs-dataset
 
 These examples are for demonstration, not an independent accuracy evaluation.
 Predictions describe visual similarity among 120 classes, not mixed-breed

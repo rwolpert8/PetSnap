@@ -7,7 +7,7 @@
   <meta name="description" content="Meet the breed behind your best friend. Upload a dog photo and explore PetSnap's five closest breed matches, powered by a custom-trained ResNet101.">
   <title>PetSnap — A little curiosity. A lot of dog.</title>
   <link rel="icon" href="/assets/paw.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=ml-explainer-1">
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -45,6 +45,7 @@
 
     <section class="demo-section wrap" id="try-it" aria-labelledby="demo-title">
       <div class="section-heading"><div><div class="eyebrow">LET’S PUT A NAME TO THAT FACE</div><h2 id="demo-title">Your dog. Our best guess.</h2></div><span class="section-note"><span class="status-dot"></span> No sign-up. Just a good photo.</span></div>
+      <aside class="demo-notice" aria-label="About this demo"><svg class="line-icon" aria-hidden="true"><use href="#spark"/></svg><p><strong>A work in progress, with room to grow.</strong> PetSnap can make mistakes, even when a prediction gets a high score. Treat the results as possibilities to explore, not a definitive breed identification.</p></aside>
       <div class="demo-grid">
         <div class="upload-panel">
           <div class="panel-heading"><span class="step-number">01</span><h3>Introduce your dog</h3><span class="small-label">PHOTO UPLOAD</span></div>
@@ -76,10 +77,27 @@
       <p class="visually-hidden" id="announcement" role="status" aria-live="polite"></p>
     </section>
 
-    <section class="how-section wrap" id="how-it-works" aria-labelledby="how-title"><div class="how-intro"><div class="eyebrow">LESS GUESSWORK. MORE TAIL WAGS.</div><h2 id="how-title">Three steps.<br>One new discovery.</h2></div><div class="how-step"><span>01 / SNAP</span><h3>Catch their good side.</h3><p>A clear photo of one dog works best. Get their face and body in the frame.</p></div><div class="how-step"><span>02 / SNIFF</span><h3>Let the model look.</h3><p>Our neural network compares visual features learned from thousands of dog photos.</p></div><div class="how-step"><span>03 / DISCOVER</span><h3>Meet the matches.</h3><p>Explore five possible breeds, with model scores showing how the predictions compare.</p></div></section>
+    <section class="ml-section wrap" id="how-it-works" aria-labelledby="how-title">
+      <div class="ml-heading"><div><div class="eyebrow">A LOOK BEHIND THE SNIFF</div><h2 id="how-title">How does a photo become a prediction?</h2></div><p>Before you arrived, PetSnap practiced on dog photos labeled by breed. It learned visual patterns that help tell breeds apart. Here’s what happens to your photo.</p></div>
+      <ol class="ml-flow">
+        <li class="ml-card">
+          <div class="ml-visual ml-photo" aria-hidden="true"><div class="pixel-photo"><img src="/assets/golden.jpg" alt="" loading="lazy"><span class="pixel-grid"></span></div><span class="visual-label">YOUR PHOTO → PIXELS</span></div>
+          <span class="ml-number">01 / THE INPUT</span><h3>A photo becomes numbers.</h3><p>We resize your photo and crop its center. The colors in that small square become numbers the model can work with.</p>
+        </li>
+        <li class="ml-card">
+          <div class="ml-visual" aria-hidden="true"><svg class="pattern-network" viewBox="0 0 280 130" fill="none"><g stroke="#b2c8f2" stroke-width="1.5"><path d="M40 25 105 40 175 22 240 65M40 65 105 40 175 65 240 65M40 105 105 90 175 108 240 65M40 25 105 90 175 65M40 105 105 40M105 90 175 22M105 40 175 108M105 90 175 108"/></g><g fill="#e2ecff" stroke="#7da1e9" stroke-width="2"><circle cx="40" cy="25" r="9"/><circle cx="40" cy="65" r="9"/><circle cx="40" cy="105" r="9"/><circle cx="105" cy="40" r="12"/><circle cx="105" cy="90" r="12"/><circle cx="175" cy="22" r="9"/><circle cx="175" cy="65" r="12"/><circle cx="175" cy="108" r="9"/></g><circle cx="240" cy="65" r="17" fill="#2258ec"/><path d="m233 65 5 5 9-10" stroke="white" stroke-width="2" fill="none"/></svg><span class="visual-label">SMALL CLUES → BIGGER PATTERNS</span></div>
+          <span class="ml-number">02 / THE LEARNED PATTERNS</span><h3>Little clues come together.</h3><p>Layers of the model combine simple patterns, like edges and textures, into more complex ones that can help distinguish one breed from another.</p>
+        </li>
+        <li class="ml-card">
+          <div class="ml-visual" aria-hidden="true"><div class="illustrated-scores"><div><span>01</span><i style="--score-width:88%"></i></div><div><span>02</span><i style="--score-width:55%"></i></div><div><span>03</span><i style="--score-width:30%"></i></div><div><span>04</span><i style="--score-width:18%"></i></div><div><span>05</span><i style="--score-width:10%"></i></div></div><span class="visual-label">120 BREEDS → FIVE POSSIBILITIES</span></div>
+          <span class="ml-number">03 / THE PREDICTION</span><h3>The closest matches rise to the top.</h3><p>The model gives each of its 120 breeds a score. We show the five highest. A higher score means the model favors that breed—it doesn’t guarantee it’s right.</p>
+        </li>
+      </ol>
+      <div class="ml-footnotes"><p><strong>Learning happens during training.</strong> Uploading a photo runs the trained model; it doesn’t teach PetSnap a new breed or add your photo to the training dataset.</p><span>Simplified illustrations, not a visualization of your photo’s actual prediction.</span></div>
+    </section>
 
     <section class="model-section wrap" id="the-model" aria-labelledby="model-title"><div class="model-copy"><div class="eyebrow">A PET PROJECT. SERIOUSLY.</div><h2 id="model-title">Dog person.<br>Data person.<br><span>Why not both?</span></h2><p>PetSnap is an independent machine learning project exploring what a neural network can learn about our four-legged friends.</p><p class="coming-next"><strong>More to discover in the full app</strong>The full PetSnap app will feature American Kennel Club information for each dog breed, so you can get to know more than just a name.</p><a href="https://github.com/rwolpert8/PetSnap" class="github-link" target="_blank" rel="noopener noreferrer">Explore the project on GitHub <svg class="line-icon"><use href="#arrow"/></svg></a></div><div class="model-details"><div class="model-metric"><span>THE ARCHITECTURE</span><strong>ResNet<span>101</span></strong><p>Pretrained on ImageNet. Fine-tuned for dogs.</p></div><div class="model-metric-row"><div><strong>120</strong><span>BREED CLASSES</span></div><div><strong>20,580</strong><span>DATASET PHOTOS</span></div></div><details><summary>A little more about the model <span>+</span></summary><p>Trained on the Stanford Dogs dataset with PyTorch. A photo is resized and center-cropped before the model returns five ranked breed predictions. Scores reflect the model’s output, not a guarantee of a correct identification.</p><p>The example photos come from the training dataset and are for demonstration, not an independent accuracy test. Unfamiliar breeds, mixed breeds, and non-dog images can produce confident but incorrect results.</p></details></div></section>
   </main>
-  <footer class="site-footer wrap"><a class="brand footer-brand" href="/">pet<span>snap</span><svg><use href="#paw"/></svg></a><span class="footer-credit">Made for curious humans and very good dogs.<br><span>Demo built in part with OpenAI Codex.</span></span><a href="https://vision.stanford.edu/aditya86/ImageNetDogs/" target="_blank" rel="noopener noreferrer">Dataset & photo credits ↗</a></footer>
+  <footer class="site-footer wrap"><a class="brand footer-brand" href="/">pet<span>snap</span><svg><use href="#paw"/></svg></a><span class="footer-credit">Made for curious humans and very good dogs.<br><span>Demo built in part with OpenAI Codex.</span></span><a href="https://www.kaggle.com/datasets/jessicali9530/stanford-dogs-dataset" target="_blank" rel="noopener noreferrer">Dataset & photo credits ↗</a></footer>
 </body>
 </html>
