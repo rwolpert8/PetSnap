@@ -76,6 +76,10 @@ ordered class labels alongside every best checkpoint.
 
 ## API Documentation
 
+For Docker packaging and Render hosting with private weights, see
+[the deployment walkthrough](deploy/README.md). Cloud storage and hosting have
+not been provisioned by these deployment files.
+
 ### Authentication
 
 The browser uses the public `POST /api/demo/predict` endpoint. Legacy prediction

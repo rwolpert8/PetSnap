@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: petsnap-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: 1c-2g
+    numInstances: 1
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PETSNAP_MODEL_BUCKET
+        sync: false
+      - key: PETSNAP_MODEL_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: PETSNAP_TRUSTED_PROXY_IPS
+        value: ""

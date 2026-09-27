@@ -97,3 +97,4 @@ credentials.json
 # Local verification dependencies and screenshots
 .runtime/
 .artifacts/
+model-cache/

@@ -1,0 +1,7 @@
+{
+  "architecture": "resnet101",
+  "num_classes": 120,
+  "size_bytes": 171613443,
+  "sha256": "db8f1bde6f301f561b82125fb9cb8f6bbe4bd3021880f1ee8b1b1d7aa1924025",
+  "labels_sha256": "9cd59586c016ad806bdc37a20e9387120ad36d8fa7e5cb930dd1124d221fef16"
+}

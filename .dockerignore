@@ -1,0 +1,20 @@
+# Allowlist: weights, datasets, credentials, and local environments never enter builds.
+**
+!Dockerfile
+!requirements-inference.txt
+!deploy/
+!deploy/requirements.txt
+!deploy/model-manifest.json
+!deploy/download_model.py
+!deploy/start.py
+!api/
+!api/*.py
+!frontend/
+!frontend/index.html
+!frontend/styles.css
+!frontend/app.js
+!frontend/assets/
+!frontend/assets/*.jpg
+!frontend/assets/*.svg
+!models/
+!models/classes.json
