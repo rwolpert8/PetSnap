@@ -1,5 +1,7 @@
 # Deploy PetSnap on Render with private model weights
 
+For Railway, follow [the Railway deployment guide](RAILWAY.md) instead.
+
 Docker installation on your computer is optional. Render builds the repository's
 Dockerfile. This setup uses **AWS S3 private storage** and downloads weights at
 **container startup**, not during the image build. No weights or credentials

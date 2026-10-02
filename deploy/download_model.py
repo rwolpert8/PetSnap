@@ -83,6 +83,7 @@ def ensure_model():
     from botocore.config import Config
 
     client = boto3.client("s3", config=Config(connect_timeout=10, read_timeout=30,
+                                             s3={"addressing_style": "virtual"},
                                              retries={"mode": "standard", "total_max_attempts": 3}))
     try:
         fetch_model(client, bucket, key, target, manifest, os.environ.get("PETSNAP_MODEL_VERSION_ID"))
