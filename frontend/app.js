@@ -30,6 +30,8 @@ function setResultState(state) {
   $('result-empty').hidden = state !== 'empty';
   $('result-loading').hidden = state !== 'loading';
   $('result-content').hidden = state !== 'ready';
+  $('result-no-dog').hidden = state !== 'no-dog';
+  $('result-label').textContent = state === 'no-dog' ? 'PHOTO CHECK' : 'TOP 5 MATCHES';
   $('result-panel').setAttribute('aria-busy', String(state === 'loading'));
   predictButton.disabled = state === 'loading' || !selectedFile;
   $('predict-label').textContent = state === 'loading' ? 'Sniffing out the possibilities…' : 'Find my dog’s breed';
@@ -98,7 +100,20 @@ async function selectFile(file, sampleName = null) {
   announce('Photo ready. Select Find my dog’s breed to get your matches.');
 }
 
+function revealResult() {
+  if (window.matchMedia('(max-width: 580px)').matches) {
+    $('result-panel').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+  }
+}
+
 function renderPredictions(data) {
+  if (data.status === 'no_dog_detected' && typeof data.message === 'string') {
+    $('no-dog-message').textContent = data.message;
+    setResultState('no-dog');
+    announce(data.message);
+    revealResult();
+    return;
+  }
   const predictions = data.top_5_predictions;
   if (!Array.isArray(predictions) || predictions.length !== 5 || predictions.some((item) =>
     typeof item.breed !== 'string' || !Number.isFinite(item.confidence) || item.confidence < 0 || item.confidence > 100)) {
@@ -130,9 +145,7 @@ function renderPredictions(data) {
   $('result-caveat').textContent = 'These scores compare visual resemblance among the model’s 120 breeds. They aren’t ancestry percentages or a guarantee of breed identity.';
   setResultState('ready');
   announce(`Closest match: ${top.breed}, with a model score of ${top.confidence.toFixed(1)} percent. Five matches are ready.`);
-  if (window.matchMedia('(max-width: 580px)').matches) {
-    $('result-panel').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
-  }
+  revealResult();
 }
 
 async function predict() {
@@ -175,6 +188,7 @@ dropZone.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => selectFile(fileInput.files[0]));
 $('remove-photo').addEventListener('click', () => { resetSelection(); dropZone.focus(); announce('Photo removed.'); });
 $('try-another').addEventListener('click', () => { resetSelection(); dropZone.focus(); });
+$('try-another-photo').addEventListener('click', () => { resetSelection(); dropZone.focus(); });
 predictButton.addEventListener('click', predict);
 
 dropZone.addEventListener('dragenter', (event) => { event.preventDefault(); dragDepth += 1; dropZone.classList.add('drag-over'); });

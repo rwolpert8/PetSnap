@@ -28,6 +28,15 @@ class DemoTests(unittest.TestCase):
         cls.client.__exit__(None, None, None)
         cls.dataset_guard.stop()
 
+    def setUp(self):
+        # Isolate API cases from the public quota; quota behavior has its own suite.
+        middleware = api_server.app.middleware_stack
+        while middleware is not None:
+            if isinstance(middleware, api_server.PublicDemoGuard):
+                middleware.clients.clear()
+                break
+            middleware = getattr(middleware, "app", None)
+
     def test_web_and_health(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
@@ -54,6 +63,19 @@ class DemoTests(unittest.TestCase):
             response = self.client.post("/api/demo/predict", files={"file": ("dog.jpg", data, "image/jpeg")})
             self.assertEqual(response.status_code, 400)
         self.assertEqual(self.client.post("/api/demo/predict").status_code, 422)
+
+    def test_real_blank_image_has_no_breed_predictions(self):
+        buffer = io.BytesIO()
+        Image.new("RGB", (300, 200), "white").save(buffer, format="PNG")
+        response = self.client.post("/api/demo/predict", files={"file": ("blank.png", buffer.getvalue(), "image/png")})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "no_dog_detected")
+        self.assertFalse(response.json()["success"])
+        self.assertNotIn("top_5_predictions", response.json())
+        with patch.object(api_server, "API_KEY", "integration-test-key"):
+            response = self.client.post("/api/identify", headers={"X-API-Key": "integration-test-key"},
+                files={"file": ("blank.png", buffer.getvalue(), "image/png")})
+        self.assertEqual(response.status_code, 400)
 
     def test_oversize_upload(self):
         response = self.client.post("/api/demo/predict", files={"file": ("dog.jpg", b"x" * (MAX_UPLOAD_BYTES + 1), "image/jpeg")})

@@ -7,8 +7,8 @@
   <meta name="description" content="Meet the breed behind your best friend. Upload a dog photo and explore PetSnap's five closest breed matches, powered by a custom-trained ResNet101.">
   <title>PetSnap — A little curiosity. A lot of dog.</title>
   <link rel="icon" href="/assets/paw.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css?v=ml-explainer-1">
-  <script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=dog-detector-1">
+  <script src="/app.js?v=dog-detector-1" defer></script>
 </head>
 <body>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -66,11 +66,12 @@
           <p class="privacy-note"><svg class="line-icon"><use href="#check"/></svg> Your photo is used for this prediction, then discarded.</p>
         </div>
         <div class="result-panel" id="result-panel" aria-busy="false">
-          <div class="panel-heading"><span class="step-number">02</span><h3>Meet the possibilities</h3><span class="small-label">TOP 5 MATCHES</span></div>
+          <div class="panel-heading"><span class="step-number">02</span><h3>Meet the possibilities</h3><span class="small-label" id="result-label">TOP 5 MATCHES</span></div>
           <div class="result-empty" id="result-empty"><div class="empty-illustration" aria-hidden="true"><svg viewBox="0 0 180 155" fill="none"><path d="M53 51 36 29C24 26 13 60 20 81c4 11 17 12 30-3M127 51l17-22c12-3 23 31 16 52-4 11-17 12-30-3" fill="#bad1ff" stroke="#4779d7" stroke-width="2.4"/><path d="M42 68c0-31 18-46 48-46s48 15 48 46v28c0 26-19 42-48 42s-48-16-48-42V68Z" fill="#e5eeff" stroke="#4779d7" stroke-width="2.4"/><path d="M73 111c6 10 28 10 34 0" stroke="#4779d7" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="68" cy="79" rx="4" ry="5" fill="#244d95"/><ellipse cx="112" cy="79" rx="4" ry="5" fill="#244d95"/><path d="M83 97c0-5 14-5 14 0 0 4-5 8-7 8s-7-4-7-8Z" fill="#244d95"/><path d="M90 105v9" stroke="#244d95" stroke-width="2.4"/><path d="m146 119 3 8 8 3-8 3-3 8-3-8-8-3 8-3 3-8ZM30 8l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Z" fill="#4779d7"/></svg><span class="question-bubble">?</span></div><h3>A familiar face.<br>A new discovery.</h3><p>Add a photo and we’ll fetch the five breeds<br>that look most like your dog.</p><span class="waiting-label"><span></span> WAITING FOR A GOOD DOG</span></div>
           <div id="result-loading" class="result-loading" hidden><span class="loading-paw"><svg><use href="#paw"/></svg></span><h3>Following our nose…</h3><p>Looking for familiar ears, faces, and features.</p><span class="loading-track"></span></div>
+          <div id="result-no-dog" class="result-empty" hidden><div class="no-dog-icon" aria-hidden="true">?</div><h3>A case of mistaken<br>dog-dentity.</h3><p id="no-dog-message"></p><button type="button" class="text-button" id="try-another-photo">Try another photo <svg class="line-icon"><use href="#arrow"/></svg></button></div>
           <div id="result-content" class="result-content" hidden><div class="match-eyebrow"><svg class="line-icon"><use href="#spark"/></svg> CLOSEST MATCH</div><h3 id="top-breed"></h3><div class="top-score"><strong id="top-score"></strong><span>model score</span><span class="result-badge">Best match</span></div><div id="prediction-list" class="prediction-list"></div><p class="result-caveat" id="result-caveat"></p><button type="button" class="text-button" id="try-another">Meet another dog <svg class="line-icon"><use href="#arrow"/></svg></button></div>
-          <p class="result-footer"><svg><use href="#paw"/></svg> Whatever the breed, definitely a good dog.</p>
+          <p class="result-footer"><svg><use href="#paw"/></svg> Every good dog deserves a closer look.</p>
         </div>
       </div>
       <p class="demo-disclaimer">A curious guess, not a pedigree. PetSnap compares appearances across 120 breeds; it doesn’t determine ancestry or mixed-breed percentages.</p>
@@ -78,7 +79,7 @@
     </section>
 
     <section class="ml-section wrap" id="how-it-works" aria-labelledby="how-title">
-      <div class="ml-heading"><div><div class="eyebrow">A LOOK BEHIND THE SNIFF</div><h2 id="how-title">How does a photo become a prediction?</h2></div><p>Before you arrived, PetSnap practiced on dog photos labeled by breed. It learned visual patterns that help tell breeds apart. Here’s what happens to your photo.</p></div>
+      <div class="ml-heading"><div><div class="eyebrow">A LOOK BEHIND THE SNIFF</div><h2 id="how-title">How does a photo become a prediction?</h2></div><p>Before you arrived, PetSnap practiced on dog photos labeled by breed. It learned visual patterns that help tell breeds apart. First, a separate detector checks the full photo for a dog. If it finds one, the breed model takes a closer look. The detector can miss dogs, so a clear, close photo helps.</p></div>
       <ol class="ml-flow">
         <li class="ml-card">
           <div class="ml-visual ml-photo" aria-hidden="true"><div class="pixel-photo"><img src="/assets/golden.jpg" alt="" loading="lazy"><span class="pixel-grid"></span></div><span class="visual-label">YOUR PHOTO → PIXELS</span></div>

@@ -16,10 +16,10 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 if __package__:
-    from .inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy
+    from .inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy, DogNotFound
     from .public_demo import PublicDemoGuard
 else:  # Also support python api/api_server.py.
-    from inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy
+    from inference import BASE_DIR, MAX_UPLOAD_BYTES, Classifier, InvalidImage, InferenceBusy, DogNotFound
     from public_demo import PublicDemoGuard
 
 API_KEY = os.getenv("DOG_CLASSIFIER_API_KEY")
@@ -50,9 +50,13 @@ async def read_upload(file: UploadFile):
     finally:
         await file.close()
 
-async def run_prediction(data: bytes):
+async def run_prediction(data: bytes, allow_rejection=False):
     try:
         return await run_in_threadpool(app.state.classifier.predict, data)
+    except DogNotFound as exc:
+        if allow_rejection:
+            return {"success": False, "status": "no_dog_detected", "message": str(exc)}
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except InvalidImage as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except InferenceBusy as exc:
@@ -283,7 +287,7 @@ async def demo_predict(request: Request, file: UploadFile = File(...)):
     form = await request.form()
     if len(form.multi_items()) != 1:
         raise HTTPException(status_code=400, detail="Upload exactly one photo using the file field.")
-    return await run_prediction(await read_upload(file))
+    return await run_prediction(await read_upload(file), allow_rejection=True)
 
 @app.post("/predict", dependencies=[Depends(verify_api_key_header)])
 async def predict_breed(file: UploadFile = File(...)):

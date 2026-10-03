@@ -11,6 +11,11 @@ import torch
 from PIL import Image, ImageOps, UnidentifiedImageError
 from torchvision import models, transforms
 
+if __package__:
+    from .dog_detector import DogDetector
+else:
+    from dog_detector import DogDetector
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_IMAGE_PIXELS = 20_000_000
@@ -18,6 +23,10 @@ ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 
 
 class InvalidImage(ValueError):
+    pass
+
+
+class DogNotFound(InvalidImage):
     pass
 
 
@@ -64,6 +73,7 @@ class Classifier:
         self.model = models.resnet101(weights=None, num_classes=len(self.classes))
         self.model.load_state_dict(torch.load(model_path, map_location="cpu", weights_only=True))
         self.model.to(self.device).eval()
+        self.detector = DogDetector(self.device)
         self.transform = transforms.Compose([
             transforms.Resize((256, 256)),
             transforms.CenterCrop(224),
@@ -78,6 +88,9 @@ class Classifier:
             raise InferenceBusy("PetSnap is meeting another dog. Try again in a moment.")
         try:
             image = decode_image(data)
+            if not self.detector.contains_dog(image):
+                raise DogNotFound("Our bark detector came up empty! Try a clear photo of a dog. "
+                                  "If there is a dog here, move closer or use a brighter photo.")
             tensor = self.transform(image).unsqueeze(0).to(self.device)
             with torch.inference_mode():
                 probabilities = self.model(tensor).softmax(dim=1)

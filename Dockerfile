@@ -1,6 +1,7 @@
 FROM python:3.11-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
+    TORCH_HOME=/opt/torch-cache \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PORT=10000 \
@@ -25,6 +26,7 @@ RUN groupadd --gid 10001 petsnap \
     && chown petsnap:petsnap /app/model-cache
 
 COPY api/ ./api/
+RUN python -m api.dog_detector && chmod -R a+rX /opt/torch-cache
 COPY frontend/ ./frontend/
 COPY models/classes.json ./models/classes.json
 COPY deploy/download_model.py deploy/start.py deploy/model-manifest.json ./deploy/

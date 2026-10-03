@@ -1,6 +1,8 @@
 # Railway deployment
 
 Use the existing Dockerfile; `render.yaml` is not used by Railway.
+The build also caches a public dog detector; no additional bucket upload or secrets
+are needed for it. See [detector behavior and validation](../docs/dog-detection.md).
 Create a private Railway bucket and configure these variables on the app service:
 
 - `PETSNAP_MODEL_BUCKET`: actual bucket name from Credentials (includes suffix).

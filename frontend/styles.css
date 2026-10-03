@@ -22,3 +22,5 @@
 /* Rotated decorative orbits must not create horizontal scrolling on phones. */
 .hero{overflow:clip}.hero-art{isolation:isolate}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+
+.no-dog-icon{margin:28px auto 14px;border:2px dashed #9bb7f1;border-radius:50%;width:78px;height:78px;display:grid;place-items:center;font-size:42px;color:var(--blue);background:#edf3ff}#result-no-dog p{max-width:310px;margin:16px auto 24px;line-height:1.8}#result-no-dog .text-button{margin-inline:auto}
